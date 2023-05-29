@@ -1,12 +1,8 @@
 import socket
-import pygame
 import random
 import server
 
 # Initialize Pygame
-pygame.init()
-player1_controller = server.udpserver()
-player2_controller = server.udpserver()
 
 # Game window dimensions
 window_width = 800
@@ -15,21 +11,6 @@ window_height = 600
 # Snake settings
 block_size = 20
 snake_speed = 10
-
-# Colors
-black = (0, 0, 0)
-white = (255, 255, 255)
-red = (255, 0, 0)
-green = (0, 255, 0)
-blue = (0, 0, 255)
-
-# Create the game window
-window = pygame.display.set_mode((window_width, window_height))
-pygame.display.set_caption("Snake Game")
-
-# Clock for controlling the game's frame rate
-clock = pygame.time.Clock()
-
 
 class Snake:
     def __init__(self, x, y, color):
@@ -59,131 +40,116 @@ class Snake:
                 (new_direction == "RIGHT" and self.direction != "LEFT"):
             self.direction = new_direction
 
-    def draw(self):
-        for segment in self.snake_segments:
-            if(self.color == blue):
-                player2_controller.send(str(segment))
-            else:
-                player1_controller.send(str(segment))
-
 class Food:
     def __init__(self):
         self.x = random.randint(0, (window_width - block_size) // block_size) * block_size
         self.y = random.randint(0, (window_height - block_size) // block_size) * block_size
 
-    def draw(self):
-        if(player2_controller!=None):
-            player2_controller.send(str(self.x)+str(self.y))
-        player1_controller.send(str(self.x)+str(self.y))
-
 class Snakegame:
     def __init__(self):
+        self.player_snake = [None, None] #Snake(0, 0, green)  Snake(0, 3, blue)
+        self.player_controller = [None, None]
+        self.player_address = [None, None]
         self.food = Food()
-
 
     def startgame(self):
         self.message = [None, None]
-        while not game_quit:
-            while game_over:
-                window.fill(black)
-                game_over_message()
-                pygame.display.update()
+        self.game_over = False
+        self.game_quit = False
+        self.score = 0
+        while self.player_controller[0] == None:
+            print('No Player yet')
+        while not self.game_quit:
+            while self.game_over:
+                self.game_over_message()
+                exit()
 
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        game_quit = True
-                        game_over = False
-                    elif event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_q:
-                            game_quit = True
-                            game_over = False
-                        elif event.key == pygame.K_r:
-                            game_loop()
+            msg = self.message[0]
+            if(msg == b'UP'):
+                self.player_snake[0].change_direction("UP")
+            elif(msg == b'DOWN'):
+                self.player_snake[0].change_direction("DOWN")
+            elif(msg == b'LEFT'):
+                self.player_snake[0].change_direction("LEFT")
+            elif(msg == b'RIGHT'):
+                self.player_snake[0].change_direction("RIGHT")
+            elif(msg == b'quit'):
+                self.game_quit = True
 
-            if(self.message[1] == b'UP' and self.player1_snake.direction != "DOWN"):
-                self.player1_snake.change_direction("UP")
-            elif(self.message[1] == b'DOWN' and self.player1_snake.direction != "UP"):
-                self.player1_snake.change_direction("DOWN")
-            elif(self.message[1] == b'LEFT' and self.player1_snake.direction != "RIGHT"):
-                self.player1_snake.change_direction("LEFT")
-            elif(self.message[1] == b'RIGHT' and self.player1_snake.direction != "LEFT"):
-                self.player1_snake.change_direction("RIGHT")
-            elif(self.message[1] == b'quit'):
-                game_quit = True
-
-            if(player2_controller):
-                if(self.message[2] == b'UP' and self.player2_snake.direction != "DOWN"):
-                    self.player2_snake.change_direction("UP")
-                elif(self.message[2] == b'DOWN' and self.player2_snake.direction != "UP"):
-                    self.player2_snake.change_direction("DOWN")
-                elif(self.message[2] == b'LEFT' and self.player2_snake.direction != "RIGHT"):
-                    self.player2_snake.change_direction("LEFT")
-                elif(self.message[2] == b'RIGHT' and self.player2_snake.direction != "LEFT"):
-                    self.player2_snake.change_direction("RIGHT")
-                elif(self.message[2] == b'quit'):
-                    game_quit = True
+            if(self.player_controller[1]):
+                msg = self.message[1]
+                if(msg == b'UP'):
+                    self.player_snake[1].change_direction("UP")
+                elif(msg == b'DOWN'):
+                    self.player_snake[1].change_direction("DOWN")
+                elif(msg == b'LEFT'):
+                    self.player_snake[1].change_direction("LEFT")
+                elif(msg == b'RIGHT'):
+                    self.player_snake[1].change_direction("RIGHT")
+                elif(msg == b'quit'):
+                    self.game_quit = True
 
             # Move the snake(s)
-            self.player1_snake.move()
-            if self.player2_snake:
-                self.player2_snake.move()
+            self.player_snake[0].move()
+            if self.player_snake[1]:
+                self.player_snake[1].move()
 
             # Check if the snake(s) collided with the boundaries or themselves
-            if any(segment in self.player1_snake.snake_segments[1:] for segment in self.player1_snake.snake_segments[0]) or \
-                    self.player1_snake.snake_segments[0][0] < 0 or \
-                    self.player1_snake.snake_segments[0][0] >= window_width or \
-                    self.player1_snake.snake_segments[0][1] < 0 or \
-                    self.player1_snake.snake_segments[0][1] >= window_height:
-                game_over = True
+            if any(segment in self.player_snake[0].snake_segments[1:] for segment in self.player_snake[0].snake_segments[0]) or \
+                    self.player_snake[0].snake_segments[0][0] < 0 or \
+                    self.player_snake[0].snake_segments[0][0] >= window_width or \
+                    self.player_snake[0].snake_segments[0][1] < 0 or \
+                    self.player_snake[0].snake_segments[0][1] >= window_height:
+                self.game_over = True
 
-            if self.player2_snake and (
-                    any(segment in self.player2_snake.snake_segments[1:] for segment in self.player2_snake.snake_segments[0]) or
-                    self.player2_snake.snake_segments[0][0] < 0 or
-                    self.player2_snake.snake_segments[0][0] >= window_width or
-                    self.player2_snake.snake_segments[0][1] < 0 or
-                    self.player2_snake.snake_segments[0][1] >= window_height):
-                game_over = True
+            if self.player_snake[1] and (
+                    any(segment in self.player_snake[1].snake_segments[1:] for segment in self.player_snake[1].snake_segments[0]) or
+                    self.player_snake[1].snake_segments[0][0] < 0 or
+                    self.player_snake[1].snake_segments[0][0] >= window_width or
+                    self.player_snake[1].snake_segments[0][1] < 0 or
+                    self.player_snake[1].snake_segments[0][1] >= window_height):
+                self.game_over = True
 
             # Check if the snake(s) ate the food
-            if self.player1_snake.snake_segments[0][0] == self.food.x and self.player1_snake.snake_segments[0][1] == self.food.y:
-                self.player1_snake.snake_segments.append((self.food.x, self.food.y))
-                score += 1
+            if self.player_snake[0].snake_segments[0][0] == self.food.x and self.player_snake[0].snake_segments[0][1] == self.food.y:
+                self.player_snake[0].snake_segments.append((self.food.x, self.food.y))
+                self.score += 1
                 self.food = Food()
+                if(self.player_controller[1]!=None):
+                    server.send(self.player_controller[1], self.player_address[1],"Food:"+str(self.x)+str(self.y))
+                server.send(self.player_controller[0], self.player_address[0],"Food:"+str(self.x)+str(self.y))
 
-            if self.player2_snake and self.player2_snake.snake_segments[0][0] == self.food.x and self.player2_snake.snake_segments[0][1] == self.food.y:
-                self.player2_snake.snake_segments.append((self.food.x, self.food.y))
-                score += 1
+            if self.player_snake[1] and self.player_snake[1].snake_segments[0][0] == self.food.x and self.player_snake[1].snake_segments[0][1] == self.food.y:
+                self.player_snake[1].snake_segments.append((self.food.x, self.food.y))
+                self.score += 1
                 self.food = Food()
+                if(self.player_controller[1]!=None):
+                    server.send(self.player_controller[1], self.player_address[1],"Food:"+str(self.x)+str(self.y))
+                server.send(self.player_controller[0], self.player_address[0],"Food:"+str(self.x)+str(self.y))
+            self.display_score(self.score)
+            for segment in self.player_snake[0].snake_segments:
+                server.send(self.player_controller[0], self.player_address[0],"Snake:"+str(segment))
+            if(self.player_snake[1]):
+                for segment in self.player_snake[1].snake_segments:
+                    server.send(self.player_controller[1], self.player_address[1],"Snake:"+str(segment))
+            
         
 
-# Function to display score on the game window
-def display_score(score):
-    if(player2_controller!=None):
-        player2_controller.send(str(score))
-    player1_controller.send(str(score))
+    # Function to display score on the game window
+    def display_score(self, score):
+        if(self.player_controller[1]!=None):
+            server.send(self.player_controller[1], self.player_address[1],str(score))
+        server.send(self.player_controller[0], self.player_address[0],str(score))
 
-# Function to display "Game Over" message
-def game_over_message():
-    if(player2_controller!=None):
-        player2_controller.send('Game Over')
-    player1_controller.send('Game Over')
+    # Function to display "Game Over" message
+    def game_over_message(self):
+        if(self.player_controller[1]!=None):
+            server.send(self.player_controller[1], self.player_address[1],'Game Over')
+        server.send(self.player_controller[0], self.player_address[0],'Game Over')
 
 def game_loop():
-    # Game variables
-    game_over = False
-    game_quit = False
-    score = 0
-
-    # Create the snake(s) and the connection to the playing clients
-    if(player1_controller.connect() == -1):
-        exit()
     player1_snake = Snake(0, 0, green)
-    if(player2_controller.connect() == -1):
-        exit()
     player2_snake = Snake(0, 3, blue)
-
-    # Create the food
-    food = Food()
 
     
         

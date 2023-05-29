@@ -4,6 +4,14 @@ import headercreator
 import threading
 import game
 
+# Colors
+black = (0, 0, 0)
+white = (255, 255, 255)
+red = (255, 0, 0)
+green = (0, 255, 0)
+blue = (0, 0, 255)
+color = [blue, green]
+
 def send(socket, server_address, _message):
     encoded_message = _message.encode('utf-8')
     header = getheader(encoded_message)
@@ -30,13 +38,16 @@ def connect():
     sock.bind((ip, port))
     sock.settimeout(5)
     sock.listen(2)
-    counter = 1
+    counter = 0
     while True:
         client_socket, client_address = sock.accept()
         # Start a new thread to handle the client connection
+        Snakegame.player_controller[counter] = client_socket
+        Snakegame.player_address[counter] = client_address
+        Snakegame.player_snake[counter] = game.Snake(0, 0, color[counter])
         client_thread = threading.Thread(target=handle_client, args=(client_socket, client_address, Snakegame, counter))
         client_thread.start()
-        counter = 2
+        counter = 1
 
 def handle_client(client_socket, client_address, game, snake):
     while True:
