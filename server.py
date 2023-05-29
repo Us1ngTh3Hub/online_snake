@@ -1,5 +1,4 @@
 import socket
-#import ipaddress
 import headercreator
 import threading
 import game
@@ -28,10 +27,12 @@ def getheader(self, encoded_message):
     return headercreator.create_udp_header(self.port, self.port, len, summ)
 
 def connect():
+    #Setup the game tread
     Snakegame = game.Snakegame()
     gamethread = threading.Thread(target=Snakegame.startgame, args=(client_socket, client_address))
     gamethread.start()
 
+    #opens Port and connects new players
     ip = socket.gethostname()
     port = 42069
     sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
@@ -41,7 +42,7 @@ def connect():
     counter = 0
     while True:
         client_socket, client_address = sock.accept()
-        # Start a new thread to handle the client connection
+        # Start a new thread to handle the player connection and give information to game thread
         Snakegame.player_controller[counter] = client_socket
         Snakegame.player_address[counter] = client_address
         Snakegame.player_snake[counter] = game.Snake(0, 0, color[counter])
@@ -63,7 +64,7 @@ def handle_client(client_socket, client_address, game, snake):
                 message += data
             game.message[snake] = message
         except socket.timeout:
-            exit()
+            send(client_socket, client_address, 'KeepAlive')
     client_socket.close()
     print("Connection closed for:", client_address)
 

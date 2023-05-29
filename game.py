@@ -1,8 +1,5 @@
-import socket
 import random
 import server
-
-# Initialize Pygame
 
 # Game window dimensions
 window_width = 800
@@ -116,25 +113,25 @@ class Snakegame:
                 self.score += 1
                 self.food = Food()
                 if(self.player_controller[1]!=None):
-                    server.send(self.player_controller[1], self.player_address[1],"Food:"+str(self.x)+str(self.y))
-                server.send(self.player_controller[0], self.player_address[0],"Food:"+str(self.x)+str(self.y))
+                    server.send(self.player_controller[1], self.player_address[1],"Food:"+str(self.x)+":"+str(self.y))
+                server.send(self.player_controller[0], self.player_address[0],"Food:"+str(self.x)+":"+str(self.y))
 
             if self.player_snake[1] and self.player_snake[1].snake_segments[0][0] == self.food.x and self.player_snake[1].snake_segments[0][1] == self.food.y:
                 self.player_snake[1].snake_segments.append((self.food.x, self.food.y))
                 self.score += 1
                 self.food = Food()
                 if(self.player_controller[1]!=None):
-                    server.send(self.player_controller[1], self.player_address[1],"Food:"+str(self.x)+str(self.y))
-                server.send(self.player_controller[0], self.player_address[0],"Food:"+str(self.x)+str(self.y))
+                    server.send(self.player_controller[1], self.player_address[1],"Food:"+str(self.x)+":"+str(self.y))
+                server.send(self.player_controller[0], self.player_address[0],"Food:"+str(self.x)+":"+str(self.y))
+
+            #tells clients the score and state of game
             self.display_score(self.score)
             for segment in self.player_snake[0].snake_segments:
-                server.send(self.player_controller[0], self.player_address[0],"Snake:"+str(segment))
+                server.send(self.player_controller[0], self.player_address[0],"Snake:"+str(segment[0])+":"+str(segment[1]))
             if(self.player_snake[1]):
                 for segment in self.player_snake[1].snake_segments:
-                    server.send(self.player_controller[1], self.player_address[1],"Snake:"+str(segment))
+                    server.send(self.player_controller[1], self.player_address[1],"Snake:"+str(segment[0])+":"+str(segment[1]))
             
-        
-
     # Function to display score on the game window
     def display_score(self, score):
         if(self.player_controller[1]!=None):
@@ -146,10 +143,3 @@ class Snakegame:
         if(self.player_controller[1]!=None):
             server.send(self.player_controller[1], self.player_address[1],'Game Over')
         server.send(self.player_controller[0], self.player_address[0],'Game Over')
-
-def game_loop():
-    player1_snake = Snake(0, 0, green)
-    player2_snake = Snake(0, 3, blue)
-
-    
-        
