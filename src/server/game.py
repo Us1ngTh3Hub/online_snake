@@ -61,6 +61,7 @@ class Snakegame:
         self.game_over = False
         self.game_quit = False
         self.score = 0
+        #wait till the game actually has players
         while self.player_controller[0] == None:
             print('No Player yet')
         while not self.game_quit:

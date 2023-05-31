@@ -4,6 +4,7 @@ import headercreator
 
 '''
 Not used anymore but first iteration for the server.
+Is not like the name implies a client but rather works a bit like a client would(the funktions do not form a working client for this application tho)
 Problems:
 -can only connect to certain ip
 -need separate application for different clients

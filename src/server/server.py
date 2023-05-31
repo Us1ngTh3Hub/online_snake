@@ -35,7 +35,7 @@ def getheader(self, encoded_message):
 def connect():
     #Setup the game tread
     Snakegame = game.Snakegame()
-    gamethread = threading.Thread(target=Snakegame.startgame, args=(client_socket, client_address))
+    gamethread = threading.Thread(target=Snakegame.startgame)
     gamethread.start()
 
     #opens Port and connects new players
