@@ -14,7 +14,8 @@ class eudpyBase:
     def __init__(self):
         self.ip = socket.gethostbyname(socket.gethostname())
         self.port = 54321
-        self.connectionrequest = b'connection request'
+        self.connection_request = b'connection request'
+        self.connection_confirmation = b'connection confirmation'
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
 
     def send(self, data):
@@ -30,10 +31,10 @@ class eudpyBase:
         # split data if it is too big for single packet
         if(len(send_data)>1024):
             for part in split_into_fixed_parts(send_data,1024):
-                self.socket.sendto(part, self.server_address)
+                self.socket.sendto(part, self.communication_socket_address)
         else:
             # transmit data
-            self.socket.sendto(send_data, self.server_address)
+            self.socket.sendto(send_data, self.communication_socket_address)
         
     # function which tracks keep alive packet traffic
     def send_keep_alive_packet(self):
@@ -75,7 +76,7 @@ class eudpyBase:
                 return -1
             message += data
         # decrypt data
-        return message.decode('utf-8')
+        return (message.decode('utf-8'), address)   
     
     def close(self):        
         # close connection
@@ -89,11 +90,14 @@ class eudpyClient(eudpyBase):
         
     def connect(self, server_host, server_port):
         # connect to server
-        server_address = (server_host, server_port)
-        self.socket.connect(server_address)
+        self.communication_socket_address = (server_host, server_port)
+        self.socket.connect(self.communication_socket_address)
         # send connection request
-        self.send(self.connectionrequest)
-        return
+        self.send(self.connection_request)
+        data, address = self.receive()
+        if data == self.connection_confirmation:
+            return 1
+        return 0
 
 # class for server specific functions
 class eudpyServer(eudpyBase):
@@ -101,4 +105,19 @@ class eudpyServer(eudpyBase):
         super().__init__(_ip, _port)
     
     def open(self):
-        return
+        counter = 0
+        while(True):
+            counter+=1
+            data, address = self.receive
+            header = headercreator.unpack_header(data[:8])
+            # check if packet is connection request
+            if(data[8:] == self.connection_request):
+                # save client address information
+                self.client_ip = address
+                self.client_port = header[1]
+                self.communication_socket_address = (self.ip, self.port)
+                # send confirmation packet
+                self.send(self.connection_confirmation)
+                return
+            if(counter >= 1000):
+                return -1
