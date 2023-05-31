@@ -1,4 +1,6 @@
 import socket
+import threading
+import time
 import checksum
 import headercreator
 
@@ -12,54 +14,85 @@ class eudpyBase:
     def __init__(self):
         self.ip = socket.gethostbyname(socket.gethostname())
         self.port = 54321
+        self.connectionrequest = b'connection request'
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_UDP)
 
     def send(self, data):
         # encode message
         encoded_data = data.encode('utf-8')
         # generate checksum
-        data_checksum = checksum.calculate_checksum(data)
+        data_checksum = checksum.calculate_checksum(encoded_data)
         # generate header
-        header = headercreator.create_udp_header(self.port, self.port, len(data), data_checksum)
+        packet_type = 0x02
+        header = headercreator.create_udp_header(self.port, self.port, len(encoded_data), packet_type, data_checksum)
         # construct data
-        send_data = encoded_data + header
+        send_data = header + encoded_data
         # split data if it is too big for single packet
         if(len(send_data)>1024):
             for part in split_into_fixed_parts(send_data,1024):
-                self.sock.sendto(part, self.server_address)
+                self.socket.sendto(part, self.server_address)
         else:
             # transmit data
-            self.sock.sendto(send_data, self.server_address)
-
-    def receive(self, buffer):
+            self.socket.sendto(send_data, self.server_address)
+        
+    # function which tracks keep alive packet traffic
+    def send_keep_alive_packet(self):
+        # set keep alive data
+        data = 0xFFFF
+        encoded_data = data.encode('utf-8')
+        # set packet type in Header
+        packet_type = 0x01
+        packet_checksum = checksum.calculate_checksum(data)
+        header = headercreator.create_udp_header(self.port, self.port, 0, packet_type, packet_checksum)
+        # construct packet
+        send_data = header + encoded_data
+        # send packet
+        self.socket.send(send_data)
+                
+    # check if keep alive packet was received in given interval
+    def check_keep_alive_packet_reception(self, interval):
+        # last_received_time is automatically updated by normal receive function
+        elapsed_time = time.time() - self.last_received_time if self.last_received_time else float('inf')
+        if elapsed_time > interval: 
+            self.close()
+    
+    def receive(self):
         # receive message
         data, address = self.sock.recvfrom(1024)
         header = headercreator.unpack_header(data[:8])
+        # check header for packet type
+        if header[3] == 0x01:
+            self.last_received_time = time.time()
+            return
+        # save packet data field
         message = data[8:]
-        # check header
+        # check header for split packet
         while header[2] != len(message):
             # join data if it was split before
             data, address = self.sock.recvfrom(1024)
             # review checksum
-            if header[3] != checksum.calculate_checksum(data):
+            if header[4] != checksum.calculate_checksum(data):
                 return -1
             message += data
         # decrypt data
         return message.decode('utf-8')
+    
+    def close(self):        
+        # close connection
+        self.socket.close()
+        return
 
 # class for client specific functions
 class eudpyClient(eudpyBase):
     def __init__(self, _ip, _port):
         super().__init__(_ip, _port)
         
-    def connect(self):
+    def connect(self, server_host, server_port):
         # connect to server
-
-        # send and receive test package
-        return
-
-    def close(self):        
-        # close connection
+        server_address = (server_host, server_port)
+        self.socket.connect(server_address)
+        # send connection request
+        self.send(self.connectionrequest)
         return
 
 # class for server specific functions
@@ -68,7 +101,4 @@ class eudpyServer(eudpyBase):
         super().__init__(_ip, _port)
     
     def open(self):
-        return
-    
-    def close(self):
         return
